@@ -155,11 +155,6 @@ uint _libsafe_stackVariableP(void *addr) {
 	printf ("indirizzo del ret address = %lx\n", ret_addr);
 	bufsize = ret_addr - (long)addr;
 
-    /*
-     * We weren't able to say for sure that the stack contains valid frame
-     * pointers, so we will return 0, which means that no check for addr will
-     * be done.
-     */
     return bufsize;
 }
 
@@ -339,149 +334,52 @@ int _libsafe_verify_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
 	return 0;
 }
 
+
 /*
  * Given an address 'addr' returns 1 iff the address points to a return address
  * or a frame pointer on the stack.  Otherwise, it returns 0.  Note: stack
  * grows down, and arrays/structures grow up.
  */
 uint _libsafe_raVariableP(void *addr) {
-    /*
-     * Does addr point to a return address or a frame pointer on the stack?
-     */
-    int is_ra = 0;
+	/*
+	* Does addr point to a return address or a frame pointer on the stack?
+	*/
+	int is_ra = 0;
+	int size = sizeof(void*); //dimensione pointer e quindi parola sullo stack, da spostare nel wrapper come var globale
+	unw_cursor_t cursor;
+	unw_context_t uc;
+	unw_word_t sp;
 
-    /*
-     * (Vandoorselaere Yoann)
-     * We have now just one cast.
-     */
-    void *fp, *sp;
-    
-    /*
-     * nextfp is used in the check for -fomit-frame-pointer code.
-     */
-    void *nextfp;
+	/*
+	* If _libsafe_die() has been called, then we don't need to do anymore
+	* libsafe checking.
+	*/
+	if (dying)
+		return 0;
 
-    /*
-     * stack_start is the highest address in the memory space mapped for this
-     * stack.
-     */
-    void *stack_start;
+	/* use libunwind to find out the sp address */
+	unw_getcontext(&uc);
+	unw_init_local(&cursor, &uc);
+	unw_get_reg(&cursor, UNW_REG_SP, &sp);
 
-    /*
-     * If _libsafe_die() has been called, then we don't need to do anymore
-     * libsafe checking.
-     */
-    if (dying)
-	return 0;
+	/*
+	* Stack grows downwards (toward 0x00).  Thus, if the stack pointer is
+	* above (>) 'addr', 'addr' can't be on the stack.
+	*/
+	if ((long)sp > (long)addr)
+		return 0;
 
-    /*
-     * (Arash Baratloo / Yoann Vandoorselaere)
-     * use the stack address of the first declared variable to get the 'sp'
-     * address in a portable way.
-     */
-    sp = &fp;
 
-    /*
-     * Stack grows downwards (toward 0x00).  Thus, if the stack pointer is
-     * above (>) 'addr', 'addr' can't be on the stack.
-     */
-    if (sp > addr)
-	return 0;
-
-    /*
-     * Note: the program name is always stored at 0xbffffffb (documented in the
-     * book Linux Kernel).  Search back through the frames to find the frame
-     * containing 'addr'.
-     */
-    fp = __builtin_frame_address(0);
-
-    /*
-     * Note that find_stack_start(fp) should never return NULL, since fp is
-     * always guaranteed to be on the stack.
-     */
-    stack_start = find_stack_start((void*)&fp);
-
-    while ((sp < fp) && (fp <= stack_start)) {
-	if (fp == addr ||	    /* addr points to a frame pointer */
-	    fp + 4 == addr)	    /* addr points to a return address */
+	while (unw_step(&cursor)>0)
 	{
-	    is_ra = 1;
-	    break;
+		unw_get_reg(&cursor, UNW_REG_SP, &sp);
+		if((long)addr == ((long)sp - size)){ /* addr points to a return address */
+			is_ra = 1;
+			break;
+		}
 	}
 
-	nextfp = *(void **) fp;
-
-	/*
-	 * The following checks are meant to detect code that doesn't insert
-	 * frame pointers onto the stack.  (i.e., code that is compiled with
-	 * -fomit-frame-pointer).
-	 */
-
-	/*
-	 * Make sure frame pointers are word aligned.
-	 */
-	if ((uint)nextfp & 0x03) {
-	    LOG(2, "fp not word aligned; bypass enabled\n");
-	    return 0;
-	}
-
-	/*
-	 * Make sure frame pointers are monotonically increasing.
-	 */
-	if (nextfp <= fp) {
-	    LOG(2, "fp not monotonically increasing; bypass enabled\n");
-	    return 0;
-	}
-
-	fp = nextfp;
-    }
-
-    /*
-     * If we haven't found the correct frame by now, it either means that addr
-     * isn't on the stack or that the stack doesn't contain frame pointers.
-     * Either way, we will return 0 to bypass checks for addr.
-     */
-    if (is_ra == 0) {
-	return 0;
-    }
-
-    /*
-     * Now check to make sure that the rest of the stack looks reasonable.
-     */
-    while ((sp < fp) && (fp <= stack_start)) {
-	nextfp = *(void **) fp;
-
-	if (nextfp == NULL) {
-	    /*
-	     * This is the only correct way to end the stack.
-	     */
-	    return is_ra;
-	}
-
-	/*
-	 * Make sure frame pointers are word aligned.
-	 */
-	if ((uint)nextfp & 0x03) {
-	    LOG(2, "fp not word aligned; bypass enabled\n");
-	    return 0;
-	}
-
-	/*
-	 * Make sure frame pointers are monotonically * increasing.
-	 */
-	if (nextfp <= fp) {
-	    LOG(2, "fp not monotonically increasing; bypass enabled\n");
-	    return 0;
-	}
-
-	fp = nextfp;
-    }
-
-    /*
-     * We weren't able to say for sure that the stack contains valid frame
-     * pointers, so we will return 0.
-     */
-    return 0;
+	return is_ra;
 }
 
 
@@ -840,17 +738,6 @@ static void get_stack_trace(const char *filename, char *buf, size_t size)
 		"    uid=%d  euid=%d  pid=%d\n",
 		filename, getuid(), geteuid(), pid);
 
-        /*
-         * Print out the call stack.  We can assume that the stack is a normal
-         * stack, since _libsafe_stackVariableP(), _libsafe_raVariableP(), or
-         * _libsafe_span_stack_frames() had to be called first.
-         */
-        ret += snprintf(buf + ret, size - ret, "Call stack:\n");
-        for ( fp = __builtin_frame_address(0); *fp; fp = *(void **) fp ) {
-                ra = *((caddr_t*)(fp+4));
-                ret += snprintf(buf + ret, size - ret, "    %p\n",
-			(caddr_t)((uint)ra-5));
-        }
 }
 
 
@@ -1267,38 +1154,6 @@ void _libsafe_warn(char *format, ...)
     LOG(1, "Terminating %s.\n", exename);
     LOG(1, "    uid=%d  euid=%d  pid=%d\n", getuid(), geteuid(), getpid());
 
-    {
-	/*
-	 * Print out the call stack.  We can assume that the stack is a normal
-	 * stack, since _libsafe_stackVariableP(), _libsafe_raVariableP(), or
-	 * _libsafe_span_stack_frames() had to be called first.
-	 */
-	caddr_t	fp, ra, nextfp, caller_addr;
-#ifndef DEBUG_TURN_OFF_SYSLOG
-	syslog(LOG_CRIT, "Call stack:\n");
-#endif
-	LOG(1, "Call stack:\n");
-
-	for (fp=__builtin_frame_address(0); *fp; fp=nextfp) {
-	    ra = *((caddr_t*)(fp+4));
-
-	    /*
-	     * Find the memory region and corresponding mapped file associated
-	     * with this address.
-	     */
-	    caller_addr = (caddr_t)((uint)ra-5);
-	    index = find_caller_addr(maps, count, caller_addr);
-
-#ifndef DEBUG_TURN_OFF_SYSLOG
-	    syslog(LOG_CRIT, "    %p  %s\n", caller_addr, maps[index].path);
-#endif
-	    LOG(1, "    %p\t%s\n", caller_addr, maps[index].path);
-
-	    nextfp = *(void **)fp;
-	    if (check_nextfp(fp, nextfp))
-		break;
-	}
-    }
 #ifndef DEBUG_TURN_OFF_SYSLOG
     syslog(LOG_CRIT, format, args);
 #endif
@@ -1317,11 +1172,6 @@ void _libsafe_warn(char *format, ...)
     prelude_alert(exename);
 #endif
     
-#ifdef DUMP_STACK
-    /* Print the contents of the stack */
-    _libsafe_dump_stack(__FILE__, __LINE__);
-#endif
-
 #ifdef NOTIFY_WITH_EMAIL
     {
 	char errmsg[1000];

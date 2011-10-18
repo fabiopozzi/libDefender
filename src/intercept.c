@@ -1,11 +1,12 @@
 #ident "$Name: release2_0-16 $"
-#ident "$Id: intercept.c,v 1.40 2002/05/31 17:37:34 ttsai Exp $"
+#ident "$Id: intercept.c,v 1.40 2011/11/01 17:37:34 ttsai Exp $"
 
 
 /*
  * Copyright (C) 2002 Avaya Labs, Avaya Inc.
  * Copyright (C) 1999 Bell Labs, Lucent Technologies.
  * Copyright (C) Arash Baratloo, Timothy Tsai, Navjot Singh, and Hamilton Slye.
+ * Copyright (C) Fabio Pozzi,
  *
  * This file is part of the Libsafe library.
  * Libsafe version 2.x: protecting against stack smashing attacks.
@@ -40,6 +41,28 @@
  *              getopt(3), getpass(3), index(3), streadd(?) 
  */
 
+/* wrapped functions:
+ * - printf
+ * - fprintf
+ * - scanf
+ * - sscanf
+ * - memcpy
+ * - strcpy
+ * - strncpy
+ * - wcscpy
+ * - stpcpy
+ * - strcat
+ * - strncat
+ * - wcscat
+ * - getwd
+ * - gets
+ * - realpath
+ * - sprintf
+ * - snprintf
+ * - fscanf
+ * - memmove
+ *
+ */
 #include <stdio.h>		/* defines stdin */
 #include <stdarg.h>		/* defines va_args */
 #define __NO_STRING_INLINES 1	/* stops the inline expansion of strcpy() */
@@ -62,6 +85,7 @@
  * ----------------- system library protocols ----------------------
  */
 typedef void *(*memcpy_t) (void *dest, const void *src, size_t n);
+typedef void *(*memmove_t) (void *dest, const void *src, size_t n);
 typedef char *(*strcpy_t) (char *dest, const char *src);
 typedef char *(*strncpy_t) (char *dest, const char *src, size_t n);
 typedef wchar_t *(*wcscpy_t) (wchar_t *dest, const wchar_t *src);
@@ -166,7 +190,7 @@ char *strcpy(char *dest, const char *src)
 	return real_strcpy(dest, src);
     }
 
-    LOG(4, "strcpy(<stack var> , <src>) stack limit=%d)\n", max_size);
+    LOG(4, "strcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
     /*
      * Note: we can't use the standard strncpy()!  From the strncpy(3) manual
      * pages: In the case where the length of 'src' is less than that of
@@ -196,7 +220,7 @@ char *strncpy(char *dest, const char *src, size_t n)
 	return real_strncpy(dest, src, n);
     }
 
-    LOG(4, "strncpy(<stack var> , <src>) stack limit=%d)\n", max_size);
+    LOG(4, "strncpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
 
     if (n > max_size && (len = strnlen(src, max_size)) == max_size)
 	_libsafe_die("Overflow caused by strncpy()");
@@ -222,7 +246,7 @@ char *stpcpy(char *dest, const char *src)
 	return real_stpcpy(dest, src);
     }
 
-    LOG(4, "stpcpy(<stack var> , <src>) stack limit=%d)\n", max_size);
+    LOG(4, "stpcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
     /*
      * Note: we can't use the standard strncpy()!  From the strncpy(3) manual
      * pages: In the case where the length of 'src' is less than that of
@@ -253,7 +277,7 @@ wchar_t *wcscpy(wchar_t *dest, const wchar_t *src)
 	return real_wcscpy(dest, src);
     }
 
-    LOG(4, "wcscpy(<stack var> , <src>) stack limit=%d)\n", max_bytes);
+    LOG(4, "wcscpy(<stack var> , <src>) stack limit=%d)\n", (int)max_bytes);
     /*
      * Note: we can't use the standard wcsncpy()!  From the wcsncpy(3) manual
      * pages: "If the length wcslen(src) is smaller than n, the remaining wide
@@ -294,7 +318,7 @@ wchar_t *wcpcpy(wchar_t *dest, const wchar_t *src)
 	return real_wcpcpy(dest, src);
     }
 
-    LOG(4, "wcpcpy(<stack var> , <src>) stack limit=%d)\n", max_bytes);
+    LOG(4, "wcpcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_bytes);
     /*
      * Note: we can't use the standard wcsncpy()!  From the wcsncpy(3) manual
      * pages: "If the length wcslen(src) is smaller than n, the remaining wide
@@ -338,12 +362,32 @@ void *memcpy(void *dest, const void *src, size_t n)
 	return real_memcpy(dest, src, n);
     }
 
-    LOG(4, "memcpy(<stack var> , <src>, %d) stack limit=%d)\n", n, max_size);
+    LOG(4, "memcpy(<stack var> , <src>, %d) stack limit=%d)\n", n, (int)max_size);
     if (n > max_size)
 	_libsafe_die("Overflow caused by memcpy()");
     return real_memcpy(dest, src, n);
 }
 
+void *memmove(void *dest, const void *src, size_t n)
+{
+    size_t max_size;
+    static memmove_t real_memmove = NULL;
+
+    real_memmove = (memmove_t) getLibraryFunction("memmove");
+
+    if (_libsafe_exclude)
+	return real_memmove(dest, src, n);
+
+    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+	LOG(5, "memmove(<heap var> , <src>, %d)\n", n);
+	return real_memmove(dest, src, n);
+    }
+
+    LOG(4, "memmove(<stack var> , <src>, %d) stack limit=%d)\n", n, (int)max_size);
+    if (n > max_size)
+	_libsafe_die("Overflow caused by memmove()");
+    return real_memmove(dest, src, n);
+}
 
 char *strcat(char *dest, const char *src)
 {
@@ -364,7 +408,7 @@ char *strcat(char *dest, const char *src)
 	return real_strcat(dest, src);
     }
 
-    LOG(4, "strcat(<stack var> , <src>) stack limit=%d\n", max_size);
+    LOG(4, "strcat(<stack var> , <src>) stack limit=%d\n", (int)max_size);
     dest_len = strnlen(dest, max_size);
     src_len = strnlen(src, max_size);
 
@@ -394,7 +438,7 @@ char *strncat(char *dest, const char *src, size_t n)
 	return real_strncat(dest, src, n);
     }
 
-    LOG(4, "strncat(<stack var> , <src>) stack limit=%d\n", max_size);
+    LOG(4, "strncat(<stack var> , <src>) stack limit=%d\n", (int)max_size);
     dest_len = strnlen(dest, max_size);
     src_len = strnlen(src, max_size);
 
@@ -870,6 +914,116 @@ printf (const char *format, ...)
   return done;
 }
 
+/* Write formatted output to STREAM from the format string FORMAT.  */
+/* VARARGS2 */
+int
+fprintf (FILE *stream, const char *format, ...)
+{
+  va_list arg;
+  int done;
+
+  va_start (arg, format);
+  done = vfprintf (stream, format, arg);
+  va_end (arg);
+
+  return done;
+}
+
+int sprintf(char *str, const char *format, ...)
+{
+    static vsprintf_t real_vsprintf = NULL;
+    static vsnprintf_t real_vsnprintf = NULL;
+    size_t max_size;
+    va_list ap;
+    int res;
+
+    if (!real_vsprintf)
+	real_vsprintf = (vsprintf_t) getLibraryFunction("vsprintf");
+    if (!real_vsnprintf)
+	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
+
+    if (_libsafe_exclude) {
+	va_start(ap, format);
+	res = real_vsprintf(str, format, ap);
+	va_end(ap);
+	return res;
+    }
+
+    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
+	LOG(5, "sprintf(<heap var>, <format>)\n");
+	va_start(ap, format);
+	res = real_vsprintf(str, format, ap);
+	va_end(ap);
+	return res;
+    }
+
+    LOG(4, "sprintf(<stack var>, <format>) stack limit=%d\n", max_size);
+    va_start(ap, format);
+
+    /*
+     * Some man pages say that -1 is returned if vsnprintf truncates the
+     * output.  However, some implementations actually return the number of
+     * chars that would have been output with a sufficiently large output
+     * buffer.  Hence, we check for both res==-1 and res>max_size-1.  The
+     * max_size-1 is to make sure that there is room for the string-terminating
+     * NULL.
+     */
+    res = real_vsnprintf(str, max_size, format, ap);
+    if (res == -1 || res > max_size-1)
+    {
+	_libsafe_die("overflow caused by sprintf()");
+    }
+    va_end(ap);
+
+    return res;
+}
+
+
+int snprintf(char *str, size_t size, const char *format, ...)
+{
+    static vsnprintf_t real_vsnprintf = NULL;
+    size_t max_size;
+    va_list ap;
+    int res;
+
+    if (!real_vsnprintf)
+	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
+
+    if (_libsafe_exclude) {
+	va_start(ap, format);
+	res = real_vsnprintf(str, size, format, ap);
+	va_end(ap);
+	return res;
+    }
+
+    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
+	LOG(5, "snprintf(<heap var>, <format>)\n");
+	va_start(ap, format);
+	res = real_vsnprintf(str, size, format, ap);
+	va_end(ap);
+	return res;
+    }
+
+    LOG(4, "snprintf(<stack var>, <format>) stack limit=%d\n", max_size);
+    va_start(ap, format);
+
+    /*
+     * Some man pages say that -1 is returned if vsnprintf truncates the
+     * output.  However, some implementations actually return the number of
+     * chars that would have been output with a sufficiently large output
+     * buffer.  Hence, we check for both res==-1 and res>max_size-1.  The
+     * max_size-1 is to make sure that there is room for the string-terminating
+     * NULL.
+     */
+    res = real_vsnprintf(str, size, format, ap);
+    if ((res == -1 || res > max_size-1) && (size > max_size))
+    {
+	_libsafe_die("overflow caused by snprintf()");
+    }
+    va_end(ap);
+
+    return res;
+}
 
 
 int
@@ -878,7 +1032,6 @@ _IO_vsscanf (string, format, args)
      const char *format;
      _IO_va_list args;
 {
-  /*LOG(2, "scanf presa\n");*/
   static _IO_vsscanf_t real_IO_vsscanf = NULL;
   int res, save_count;
   caddr_t ra_array[MAXLEVELS], fp_array[MAXLEVELS];
@@ -905,6 +1058,7 @@ _IO_vsscanf (string, format, args)
 
 }
 
+/* to do add check for libsafe_exclude */
 int
 sscanf (const char *s, const char *format, ...)
 {
@@ -913,6 +1067,21 @@ sscanf (const char *s, const char *format, ...)
 
   va_start (arg, format);
   done = _IO_vsscanf (s, format, arg);
+  va_end (arg);
+
+  return done;
+}
+
+/* Read formatted input from STREAM according to the format string FORMAT.  */
+/* VARARGS2 */
+int
+__fscanf (FILE *stream, const char *format, ...)
+{
+  va_list arg;
+  int done;
+
+  va_start (arg, format);
+  done = __vfscanf (stream, format, arg);
   va_end (arg);
 
   return done;
@@ -1262,102 +1431,6 @@ int _IO_vfprintf(FILE *fp, const char *format, va_list ap)
     return res;
 }
 
-
-int sprintf(char *str, const char *format, ...)
-{
-    static vsprintf_t real_vsprintf = NULL;
-    static vsnprintf_t real_vsnprintf = NULL;
-    size_t max_size;
-    va_list ap;
-    int res;
-
-    if (!real_vsprintf)
-	real_vsprintf = (vsprintf_t) getLibraryFunction("vsprintf");
-    if (!real_vsnprintf)
-	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
-
-    if (_libsafe_exclude) {
-	va_start(ap, format);
-	res = real_vsprintf(str, format, ap);
-	va_end(ap);
-	return res;
-    }
-
-    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
-	LOG(5, "sprintf(<heap var>, <format>)\n");
-	va_start(ap, format);
-	res = real_vsprintf(str, format, ap);
-	va_end(ap);
-	return res;
-    }
-
-    LOG(4, "sprintf(<stack var>, <format>) stack limit=%d\n", max_size);
-    va_start(ap, format);
-
-    /*
-     * Some man pages say that -1 is returned if vsnprintf truncates the
-     * output.  However, some implementations actually return the number of
-     * chars that would have been output with a sufficiently large output
-     * buffer.  Hence, we check for both res==-1 and res>max_size-1.  The
-     * max_size-1 is to make sure that there is room for the string-terminating
-     * NULL.
-     */
-    res = real_vsnprintf(str, max_size, format, ap);
-    if (res == -1 || res > max_size-1)
-    {
-	_libsafe_die("overflow caused by sprintf()");
-    }
-    va_end(ap);
-
-    return res;
-}
-
-
-int snprintf(char *str, size_t size, const char *format, ...)
-{
-    static vsnprintf_t real_vsnprintf = NULL;
-    size_t max_size;
-    va_list ap;
-    int res;
-
-    if (!real_vsnprintf)
-	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
-
-    if (_libsafe_exclude) {
-	va_start(ap, format);
-	res = real_vsnprintf(str, size, format, ap);
-	va_end(ap);
-	return res;
-    }
-
-    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
-	LOG(5, "snprintf(<heap var>, <format>)\n");
-	va_start(ap, format);
-	res = real_vsnprintf(str, size, format, ap);
-	va_end(ap);
-	return res;
-    }
-
-    LOG(4, "snprintf(<stack var>, <format>) stack limit=%d\n", max_size);
-    va_start(ap, format);
-
-    /*
-     * Some man pages say that -1 is returned if vsnprintf truncates the
-     * output.  However, some implementations actually return the number of
-     * chars that would have been output with a sufficiently large output
-     * buffer.  Hence, we check for both res==-1 and res>max_size-1.  The
-     * max_size-1 is to make sure that there is room for the string-terminating
-     * NULL.
-     */
-    res = real_vsnprintf(str, size, format, ap);
-    if ((res == -1 || res > max_size-1) && (size > max_size))
-    {
-	_libsafe_die("overflow caused by snprintf()");
-    }
-    va_end(ap);
-
-    return res;
-}
 
 
 int vsprintf(char *str, const char *format, va_list ap)
