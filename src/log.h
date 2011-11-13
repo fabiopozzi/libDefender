@@ -38,7 +38,7 @@
  * undef=no overhead, 0=none, 1=errors, ..., 5=everything
  */
 #ifndef LOG_LEVEL
-#define LOG_LEVEL 5
+#define LOG_LEVEL 1
 #endif				/* LOG_LEVEL */
 
 #ifdef LOG_LEVEL

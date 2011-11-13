@@ -186,11 +186,11 @@ char *strcpy(char *dest, const char *src)
 	return real_strcpy(dest, src);
 
     if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
-	LOG(5, "strcpy(<heap var> , <src>)\n");
+	//LOG(5, "strcpy(<heap var> , <src>)\n");
 	return real_strcpy(dest, src);
     }
 
-    LOG(4, "strcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
+    //LOG(4, "strcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
     /*
      * Note: we can't use the standard strncpy()!  From the strncpy(3) manual
      * pages: In the case where the length of 'src' is less than that of
@@ -216,11 +216,11 @@ char *strncpy(char *dest, const char *src, size_t n)
 	return real_strncpy(dest, src, n);
 
     if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
-	LOG(5, "strncpy(<heap var> , <src>)\n");
+	//LOG(5, "strncpy(<heap var> , <src>)\n");
 	return real_strncpy(dest, src, n);
     }
 
-    LOG(4, "strncpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
+    //LOG(4, "strncpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
 
     if (n > max_size && (len = strnlen(src, max_size)) == max_size)
 	_libsafe_die("Overflow caused by strncpy()");
@@ -242,11 +242,11 @@ char *stpcpy(char *dest, const char *src)
 	return real_stpcpy(dest, src);
 
     if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
-	LOG(5, "stpcpy(<heap var> , <src>)\n");
+//	LOG(5, "stpcpy(<heap var> , <src>)\n");
 	return real_stpcpy(dest, src);
     }
 
-    LOG(4, "stpcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
+    //LOG(4, "stpcpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
     /*
      * Note: we can't use the standard strncpy()!  From the strncpy(3) manual
      * pages: In the case where the length of 'src' is less than that of

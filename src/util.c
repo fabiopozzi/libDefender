@@ -150,9 +150,9 @@ uint _libsafe_stackVariableP(void *addr) {
 	unw_step(&cursor);
 	unw_step(&cursor);
 	unw_get_reg(&cursor, UNW_REG_SP, &sp);
-	printf ("stack pointer = %lx\n", (long) sp );
+	//printf ("stack pointer = %lx\n", (long) sp );
 	ret_addr = (long) sp - size;
-	printf ("indirizzo del ret address = %lx\n", ret_addr);
+	//printf ("indirizzo del ret address = %lx\n", ret_addr);
 	bufsize = ret_addr - (long)addr;
 
     return bufsize;
