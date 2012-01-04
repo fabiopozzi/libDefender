@@ -5,9 +5,9 @@
  * Copyright (C) 2002 Avaya Labs, Avaya Inc.
  * Copyright (C) 1999 Bell Labs, Lucent Technologies.
  * Copyright (C) Arash Baratloo, Timothy Tsai, and Navjot Singh.
+ * Copyright (C) Fabio Pozzi,
  *
- * This file is part of the Libsafe library.
- * Libsafe version 2.x: protecting against stack smashing attacks.
+ * This file is based on the Libsafe library, version 2.x.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,10 +22,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * For more information, 
- *   visit http://www.research.avayalabs.com/project/libsafe/index.html
- *   or email libsafe@research.avayalabs.com
  */
 
 #ifndef _LOG_H

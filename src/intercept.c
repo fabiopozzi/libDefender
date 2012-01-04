@@ -8,8 +8,7 @@
  * Copyright (C) Arash Baratloo, Timothy Tsai, Navjot Singh, and Hamilton Slye.
  * Copyright (C) Fabio Pozzi,
  *
- * This file is part of the Libsafe library.
- * Libsafe version 2.x: protecting against stack smashing attacks.
+ * This file is based on the Libsafe library, version 2.x.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,10 +23,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * For more information, 
- *
- *   visit http://www.research.avayalabs.com/project/libsafe/index.html
- *   or email libsafe@research.avayalabs.com
  */
 
 /* 
@@ -41,7 +36,7 @@
  *              getopt(3), getpass(3), index(3), streadd(?) 
  */
 
-/* wrapped functions:
+/* Wrapped functions:
  * - printf
  * - fprintf
  * - scanf
@@ -108,10 +103,10 @@ typedef int (*_IO_vsscanf_t) (const char *string, const char *format, _IO_va_lis
 	args);
 
 /*
- * 0 = don't do any libsafe checking for this process
- * 1 = enable libsafe checking for this process
+ * 0 = don't do any libDefender checking for this process
+ * 1 = enable libDefender checking for this process
  */
-int _libsafe_exclude = 0;
+int _libDefender_exclude = 0;
 
 
 /*
@@ -182,10 +177,10 @@ char *strcpy(char *dest, const char *src)
     if (!real_strcpy)
 	real_strcpy = (strcpy_t) getLibraryFunction("strcpy");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_strcpy(dest, src);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 	//LOG(5, "strcpy(<heap var> , <src>)\n");
 	return real_strcpy(dest, src);
     }
@@ -199,7 +194,7 @@ char *strcpy(char *dest, const char *src)
      * implementation.
      */
     if ((len = strnlen(src, max_size)) == max_size)
-	_libsafe_die("Overflow caused by strcpy()");
+	_libDefender_die("Overflow caused by strcpy()");
     real_memcpy(dest, src, len + 1);
     return dest;
 }
@@ -212,10 +207,10 @@ char *strncpy(char *dest, const char *src, size_t n)
     if (!real_strncpy)
 	real_strncpy = (strncpy_t) getLibraryFunction("strncpy");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_strncpy(dest, src, n);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 	//LOG(5, "strncpy(<heap var> , <src>)\n");
 	return real_strncpy(dest, src, n);
     }
@@ -223,7 +218,7 @@ char *strncpy(char *dest, const char *src, size_t n)
     //LOG(4, "strncpy(<stack var> , <src>) stack limit=%d)\n", (int)max_size);
 
     if (n > max_size && (len = strnlen(src, max_size)) == max_size)
-	_libsafe_die("Overflow caused by strncpy()");
+	_libDefender_die("Overflow caused by strncpy()");
 
     return real_strncpy(dest, src, n);
 }
@@ -238,10 +233,10 @@ char *stpcpy(char *dest, const char *src)
     if (!real_stpcpy)
 	real_stpcpy = (stpcpy_t) getLibraryFunction("stpcpy");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_stpcpy(dest, src);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 //	LOG(5, "stpcpy(<heap var> , <src>)\n");
 	return real_stpcpy(dest, src);
     }
@@ -255,7 +250,7 @@ char *stpcpy(char *dest, const char *src)
      * implementation.
      */
     if ((len = strnlen(src, max_size)) == max_size)
-	_libsafe_die("Overflow caused by stpcpy()");
+	_libDefender_die("Overflow caused by stpcpy()");
     real_memcpy(dest, src, len + 1);
     return dest + len;
 }
@@ -269,10 +264,10 @@ wchar_t *wcscpy(wchar_t *dest, const wchar_t *src)
     if (!real_wcscpy)
 	real_wcscpy = (wcscpy_t) getLibraryFunction("wcscpy");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_wcscpy(dest, src);
 
-    if ((max_bytes = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_bytes = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "strcpy(<heap var> , <src>)\n");
 	return real_wcscpy(dest, src);
     }
@@ -292,7 +287,7 @@ wchar_t *wcscpy(wchar_t *dest, const wchar_t *src)
 	 * found in the first max_wchars wide characters.  So, this
 	 * wide-character string won't fit in the stack frame.
 	 */
-	_libsafe_die("Overflow caused by wcscpy()");
+	_libDefender_die("Overflow caused by wcscpy()");
     }
 
     /*
@@ -310,10 +305,10 @@ wchar_t *wcpcpy(wchar_t *dest, const wchar_t *src)
     if (!real_wcpcpy)
 	real_wcpcpy = (wcpcpy_t) getLibraryFunction("wcpcpy");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_wcpcpy(dest, src);
 
-    if ((max_bytes = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_bytes = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "strcpy(<heap var> , <src>)\n");
 	return real_wcpcpy(dest, src);
     }
@@ -333,7 +328,7 @@ wchar_t *wcpcpy(wchar_t *dest, const wchar_t *src)
 	 * found in the first max_wchars wide characters.  So, this
 	 * wide-character string won't fit in the stack frame.
 	 */
-	_libsafe_die("Overflow caused by wcpcpy()");
+	_libDefender_die("Overflow caused by wcpcpy()");
     }
 
     /*
@@ -354,17 +349,17 @@ void *memcpy(void *dest, const void *src, size_t n)
     if (!real_memcpy)
 	real_memcpy = (memcpy_t) getLibraryFunction("memcpy");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_memcpy(dest, src, n);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "memcpy(<heap var> , <src>, %d)\n", n);
 	return real_memcpy(dest, src, n);
     }
 
     LOG(4, "memcpy(<stack var> , <src>, %d) stack limit=%d)\n", n, (int)max_size);
     if (n > max_size)
-	_libsafe_die("Overflow caused by memcpy()");
+	_libDefender_die("Overflow caused by memcpy()");
     return real_memcpy(dest, src, n);
 }
 
@@ -375,17 +370,17 @@ void *memmove(void *dest, const void *src, size_t n)
 
     real_memmove = (memmove_t) getLibraryFunction("memmove");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_memmove(dest, src, n);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "memmove(<heap var> , <src>, %d)\n", n);
 	return real_memmove(dest, src, n);
     }
 
     LOG(4, "memmove(<stack var> , <src>, %d) stack limit=%d)\n", n, (int)max_size);
     if (n > max_size)
-	_libsafe_die("Overflow caused by memmove()");
+	_libDefender_die("Overflow caused by memmove()");
     return real_memmove(dest, src, n);
 }
 
@@ -400,10 +395,10 @@ char *strcat(char *dest, const char *src)
     if (!real_strcat)
 	real_strcat = (strcat_t) getLibraryFunction("strcat");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_strcat(dest, src);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "strcat(<heap var> , <src>)\n");
 	return real_strcat(dest, src);
     }
@@ -413,7 +408,7 @@ char *strcat(char *dest, const char *src)
     src_len = strnlen(src, max_size);
 
     if (dest_len + src_len >= max_size)
-	_libsafe_die("Overflow caused by strcat()");
+	_libDefender_die("Overflow caused by strcat()");
 
     real_memcpy(dest + dest_len, src, src_len + 1);
 
@@ -430,10 +425,10 @@ char *strncat(char *dest, const char *src, size_t n)
     if (!real_strncat)
 	real_strncat = (strncat_t) getLibraryFunction("strncat");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_strncat(dest, src, n);
 
-    if ((max_size = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "strncat(<heap var> , <src>)\n");
 	return real_strncat(dest, src, n);
     }
@@ -443,7 +438,7 @@ char *strncat(char *dest, const char *src, size_t n)
     src_len = strnlen(src, max_size);
 
     if (dest_len + n > max_size && dest_len + src_len >= max_size)
-	_libsafe_die("Overflow caused by strncat()");
+	_libDefender_die("Overflow caused by strncat()");
 
     return real_strncat(dest, src, n);
 }
@@ -461,10 +456,10 @@ wchar_t *wcscat(wchar_t *dest, const wchar_t *src)
     if (!real_wcscat)
 	real_wcscat = (wcscat_t) getLibraryFunction("wcscat");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_wcscat(dest, src);
 
-    if ((max_bytes = _libsafe_stackVariableP(dest)) == 0) {
+    if ((max_bytes = _libDefender_stackVariableP(dest)) == 0) {
 	LOG(5, "wcscat(<heap var> , <src>)\n");
 	return real_wcscat(dest, src);
     }
@@ -474,7 +469,7 @@ wchar_t *wcscat(wchar_t *dest, const wchar_t *src)
     src_len = wcsnlen(src, max_bytes/sizeof(wchar_t));
 
     if (dest_len + src_len + 1 >= max_bytes/sizeof(wchar_t))
-	_libsafe_die("Overflow caused by wcscat()");
+	_libDefender_die("Overflow caused by wcscat()");
 
     real_memcpy(dest + dest_len, src, src_len + 1);
 
@@ -484,7 +479,7 @@ wchar_t *wcscat(wchar_t *dest, const wchar_t *src)
 
 
 /*
- * How deep can the stack be when _libsafe_save_ra_fp() is called?  We need to
+ * How deep can the stack be when _libDefender_save_ra_fp() is called?  We need to
  * save the return addresses and frame pointers for stack frame.  MAXLEVELS is
  * the size of the arrays to save these values, since we don't want to mess
  * around with malloc().
@@ -942,14 +937,14 @@ int sprintf(char *str, const char *format, ...)
     if (!real_vsnprintf)
 	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
 
-    if (_libsafe_exclude) {
+    if (_libDefender_exclude) {
 	va_start(ap, format);
 	res = real_vsprintf(str, format, ap);
 	va_end(ap);
 	return res;
     }
 
-    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(str)) == 0) {
 	LOG(5, "sprintf(<heap var>, <format>)\n");
 	va_start(ap, format);
 	res = real_vsprintf(str, format, ap);
@@ -971,7 +966,7 @@ int sprintf(char *str, const char *format, ...)
     res = real_vsnprintf(str, max_size, format, ap);
     if (res == -1 || res > max_size-1)
     {
-	_libsafe_die("overflow caused by sprintf()");
+	_libDefender_die("overflow caused by sprintf()");
     }
     va_end(ap);
 
@@ -989,14 +984,14 @@ int snprintf(char *str, size_t size, const char *format, ...)
     if (!real_vsnprintf)
 	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
 
-    if (_libsafe_exclude) {
+    if (_libDefender_exclude) {
 	va_start(ap, format);
 	res = real_vsnprintf(str, size, format, ap);
 	va_end(ap);
 	return res;
     }
 
-    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(str)) == 0) {
 	LOG(5, "snprintf(<heap var>, <format>)\n");
 	va_start(ap, format);
 	res = real_vsnprintf(str, size, format, ap);
@@ -1018,7 +1013,7 @@ int snprintf(char *str, size_t size, const char *format, ...)
     res = real_vsnprintf(str, size, format, ap);
     if ((res == -1 || res > max_size-1) && (size > max_size))
     {
-	_libsafe_die("overflow caused by snprintf()");
+	_libDefender_die("overflow caused by snprintf()");
     }
     va_end(ap);
 
@@ -1039,26 +1034,26 @@ _IO_vsscanf (string, format, args)
   if (!real_IO_vsscanf)
 	real_IO_vsscanf = (_IO_vsscanf_t) getLibraryFunction("vsscanf");
 
-  if (_libsafe_exclude)
+  if (_libDefender_exclude)
 	return real_IO_vsscanf(string, format, args);
 
-  save_count = _libsafe_save_ra_fp(sizeof(ra_array)/sizeof(caddr_t),
+  save_count = _libDefender_save_ra_fp(sizeof(ra_array)/sizeof(caddr_t),
     ra_array, fp_array);
 
   res = real_IO_vsscanf(string, format, args);
 
 	// controllo prima e dopo l'operazione !! da reimplementare
-  if (save_count >= 0 && _libsafe_verify_ra_fp(save_count, ra_array,
+  if (save_count >= 0 && _libDefender_verify_ra_fp(save_count, ra_array,
 	fp_array) == -1)
   {
-	_libsafe_die("Overflow caused by *scanf()");
+	_libDefender_die("Overflow caused by *scanf()");
   }
 
   return res;
 
 }
 
-/* to do add check for libsafe_exclude */
+/* to do add check for libDefender_exclude */
 int
 sscanf (const char *s, const char *format, ...)
 {
@@ -1116,7 +1111,7 @@ int vfprintf(FILE *fp, const char *format, va_list ap)
     if (!real_vfprintf)
 	real_vfprintf = (vfprintf_t) getLibraryFunction("vfprintf");
 
-    if (_libsafe_exclude) {
+    if (_libDefender_exclude) {
 	res = real_vfprintf(fp, format, ap);
 	return res;
     }
@@ -1254,8 +1249,8 @@ int vfprintf(FILE *fp, const char *format, va_list ap)
 		    addr = *((caddr_t*)(ap + c*sizeof(char*)));
 		}
 		if (*p == 'n') {
-		    if (_libsafe_raVariableP((void *)(addr))) {
-			_libsafe_die("printf(\"%%n\")");
+		    if (_libDefender_raVariableP((void *)(addr))) {
+			_libDefender_die("printf(\"%%n\")");
 		    }
 		}
 	    }
@@ -1281,7 +1276,7 @@ int _IO_vfprintf(FILE *fp, const char *format, va_list ap)
     if (!real_vfprintf)
 	real_vfprintf = (vfprintf_t) getLibraryFunction("vfprintf");
 
-    if (_libsafe_exclude) {
+    if (_libDefender_exclude) {
 	res = real_vfprintf(fp, format, ap);
 	return res;
     }
@@ -1419,8 +1414,8 @@ int _IO_vfprintf(FILE *fp, const char *format, va_list ap)
 		    addr = *((caddr_t*)(ap + c*sizeof(char*)));
 		}
 		if (*p == 'n') {
-		    if (_libsafe_raVariableP((void *)(addr))) {
-			_libsafe_die("printf(\"%%n\")");
+		    if (_libDefender_raVariableP((void *)(addr))) {
+			_libDefender_die("printf(\"%%n\")");
 		    }
 		}
 	    }
@@ -1445,10 +1440,10 @@ int vsprintf(char *str, const char *format, va_list ap)
     if (!real_vsnprintf)
 	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_vsprintf(str, format, ap);
 
-    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(str)) == 0) {
 	LOG(5, "vsprintf(<heap var>, <format>, <va_list>)\n");
 	return real_vsprintf(str, format, ap);
     }
@@ -1466,7 +1461,7 @@ int vsprintf(char *str, const char *format, va_list ap)
     res = real_vsnprintf(str, max_size, format, ap);
     if (res == -1 || res > max_size-1)
     {
-	_libsafe_die("overflow caused by vsprintf()");
+	_libDefender_die("overflow caused by vsprintf()");
     }
     return res;
 }
@@ -1481,10 +1476,10 @@ int vsnprintf(char *str, size_t size, const char *format, va_list ap)
     if (!real_vsnprintf)
 	real_vsnprintf = (vsnprintf_t) getLibraryFunction("vsnprintf");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_vsnprintf(str, size, format, ap);
 
-    if ((max_size = _libsafe_stackVariableP(str)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(str)) == 0) {
 	LOG(5, "vsnprintf(<heap var>, <format>, <va_list>)\n");
 	return real_vsnprintf(str, size, format, ap);
     }
@@ -1502,7 +1497,7 @@ int vsnprintf(char *str, size_t size, const char *format, va_list ap)
     res = real_vsnprintf(str, size, format, ap);
     if ((res == -1 || res > max_size-1) && (size > max_size))
     {
-	_libsafe_die("overflow caused by vsnprintf()");
+	_libDefender_die("overflow caused by vsnprintf()");
     }
     return res;
 }
@@ -1517,10 +1512,10 @@ char *getwd(char *buf)
     if (!real_getwd)
 	real_getwd = (getwd_t) getLibraryFunction("getwd");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_getwd(buf);
 
-    if ((max_size = _libsafe_stackVariableP(buf)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(buf)) == 0) {
 	LOG(5, "getwd(<heap var>)\n");
 	return real_getwd(buf);
     }
@@ -1528,7 +1523,7 @@ char *getwd(char *buf)
     LOG(4, "getwd(<stack var>) stack limit=%d\n", max_size);
     res = getcwd(buf, PATH_MAX);
     if ((strlen(buf) + 1) > max_size)
-	_libsafe_die("Overflow caused by getwd()");
+	_libDefender_die("Overflow caused by getwd()");
     return res;
 }
 
@@ -1541,10 +1536,10 @@ char *gets(char *s)
     if (!real_gets)
 	real_gets = (gets_t) getLibraryFunction("gets");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_gets(s);
 
-    if ((max_size = _libsafe_stackVariableP(s)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(s)) == 0) {
 	LOG(5, "gets(<heap var>)\n");
 	return real_gets(s);
     }
@@ -1571,10 +1566,10 @@ char *realpath(char *path, char resolved_path[])
     if (!real_realpath)
 	real_realpath = (realpath_t) getLibraryFunction("realpath");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_realpath(path, resolved_path);
 
-    if ((max_size = _libsafe_stackVariableP(resolved_path)) == 0) {
+    if ((max_size = _libDefender_stackVariableP(resolved_path)) == 0) {
 	LOG(5, "realpath(<src>, <heap var>)\n");
 	return real_realpath(path, resolved_path);
     }
@@ -1585,7 +1580,7 @@ char *realpath(char *path, char resolved_path[])
      */
     res = real_realpath(path, buf);
     if ((len = strnlen(buf, max_size)) == max_size)
-	_libsafe_die("Overflow caused by realpath()");
+	_libDefender_die("Overflow caused by realpath()");
 
     real_memcpy(resolved_path, buf, len + 1);
     return (res == NULL) ? NULL : resolved_path;
@@ -1601,18 +1596,18 @@ int _IO_vfscanf (_IO_FILE *s, const char *format, _IO_va_list argptr, int *errp)
     if (!real_IO_vfscanf)
 	real_IO_vfscanf = (_IO_vfscanf_t) getLibraryFunction("_IO_vfscanf");
 
-    if (_libsafe_exclude)
+    if (_libDefender_exclude)
 	return real_IO_vfscanf(s, format, argptr, errp);
 
-    save_count = _libsafe_save_ra_fp(sizeof(ra_array)/sizeof(caddr_t),
+    save_count = _libDefender_save_ra_fp(sizeof(ra_array)/sizeof(caddr_t),
 	    ra_array, fp_array);
 
     res = real_IO_vfscanf(s, format, argptr, errp);
 
-    if (save_count >= 0 && _libsafe_verify_ra_fp(save_count, ra_array,
+    if (save_count >= 0 && _libDefender_verify_ra_fp(save_count, ra_array,
 		fp_array) == -1)
     {
-	_libsafe_die("Overflow caused by *scanf()");
+	_libDefender_die("Overflow caused by *scanf()");
     }
 
     return res;
@@ -1652,16 +1647,16 @@ static void _intercept_init(void)
 
     /*
      * Is this process on the list of applications to ignore?  Note that
-     * programs listed in /etc/libsafe.exclude must be specified as absolute
+     * programs listed in /etc/libDefender.exclude must be specified as absolute
      * pathnames.
      */
     get_exename(exename, MAXPATHLEN);
-    if ((fp=fopen("/etc/libsafe.exclude", "r")) != NULL) {
+    if ((fp=fopen("/etc/libDefender.exclude", "r")) != NULL) {
 	while (fgets(omitfile, sizeof(omitfile), fp)) {
 	    omitfile[strnlen(omitfile, sizeof(omitfile)) - 1] = (char)NULL;
 
 	    if (!strncmp(omitfile, exename, sizeof(omitfile))) {
-		_libsafe_exclude = 1;
+		_libDefender_exclude = 1;
 	    }
 
 	    /*
@@ -1672,7 +1667,7 @@ static void _intercept_init(void)
 	     */
 	    if (!strncmp(omitfile, "LIBSAFE_PROTECT_ROOT", sizeof(omitfile))) {
 		if (geteuid() >= 100)
-		    _libsafe_exclude = 1;
+		    _libDefender_exclude = 1;
 	    }
 	}
 	

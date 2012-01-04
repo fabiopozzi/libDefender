@@ -5,9 +5,9 @@
  * Copyright (C) 2002 Avaya Labs, Avaya Inc.
  * Copyright (C) 1999 Bell Labs, Lucent Technologies.
  * Copyright (C) Arash Baratloo, Timothy Tsai, and Navjot Singh.
+ * Copyright (C) Fabio Pozzi,
  *
- * This file is part of the Libsafe library.
- * Libsafe version 2.x: protecting against stack smashing attacks.
+ * This file is based on the Libsafe library, version 2.x.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,9 +23,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * For more information, 
- *   visit http://www.research.avayalabs.com/project/libsafe/index.html
- *   or email libsafe@research.avayalabs.com
  */
 
 
@@ -73,16 +70,16 @@ static char *get_exename(char *exename, int size) {
 
 
 /*
- * Has _libsafe_die() been called?
+ * Has _libDefender_die() been called?
  */
 static int dying = 0;
 
 
 /*
  * Have we detected a stack with no frame pointers?  If so, we will assume that
- * we can bypass the libsafe checks for the entire process from that point on.
+ * we can bypass the libDefender checks for the entire process from that point on.
  */
-extern int _libsafe_exclude;
+extern int _libDefender_exclude;
 
 
 #define PTHREAD_STACK_SIZE	(0x1fffff)
@@ -107,15 +104,15 @@ extern int _libsafe_exclude;
 
 /*****************************************************************************
  * 
- * These are functions that do the real work of determining if a libsafe
+ * These are functions that do the real work of determining if a libDefender
  * violation has occurred.
  *
  *****************************************************************************/
 
-uint _libsafe_stackVariableP(void *addr) {
+uint _libDefender_stackVariableP(void *addr) {
     /*
      * bufsize is the distance between addr and the end of the stack frame.
-     * It's what _libsafe_stackVariableP() is trying to calculate.
+     * It's what _libDefender_stackVariableP() is trying to calculate.
      */
     uint bufsize = 0;
     int size = sizeof(void*); //dimensione pointer e quindi parola sullo stack, da spostare nel wrapper come var globale
@@ -166,7 +163,7 @@ uint _libsafe_stackVariableP(void *addr) {
  * not stored, return -1; else return the count of items stores in ra_array or
  * fp_array.
  */
-int _libsafe_save_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
+int _libDefender_save_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
     /*
      * How many values we have placed in ra[] or fp[].
      */
@@ -190,8 +187,8 @@ int _libsafe_save_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
     /*void *stack_start;*/
 
     /*
-     * If _libsafe_die() has been called, then we don't need to do anymore
-     * libsafe checking.
+     * If _libDefender_die() has been called, then we don't need to do anymore
+     * libDefender checking.
      */
     if (dying)
 	return -1;
@@ -251,10 +248,10 @@ int _libsafe_save_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
  * check was completed and failed.  count is the number of valid values in
  * ra_array and fp_array.
  *
- * Note that _libsafe_save_ra_fp() and _libsafe_verify_ra_fp() must be called
+ * Note that _libDefender_save_ra_fp() and _libDefender_verify_ra_fp() must be called
  * from within the same stack frame.
  */
-int _libsafe_verify_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
+int _libDefender_verify_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
     int count = 0;
     int size = sizeof(void*); //dimensione pointer e quindi parola sullo stack, da spostare nel wrapper come var globale
     unw_cursor_t cursor;
@@ -275,8 +272,8 @@ int _libsafe_verify_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
     /*void *stack_start;*/
 
     /*
-     * If _libsafe_die() has been called, then we don't need to do anymore
-     * libsafe checking.
+     * If _libDefender_die() has been called, then we don't need to do anymore
+     * libDefender checking.
      */
     if (dying)
 	return 1; //this time return 1 instead of -1
@@ -340,7 +337,7 @@ int _libsafe_verify_ra_fp(int maxcount, caddr_t *ra_array, caddr_t *fp_array) {
  * or a frame pointer on the stack.  Otherwise, it returns 0.  Note: stack
  * grows down, and arrays/structures grow up.
  */
-uint _libsafe_raVariableP(void *addr) {
+uint _libDefender_raVariableP(void *addr) {
 	/*
 	* Does addr point to a return address or a frame pointer on the stack?
 	*/
@@ -351,8 +348,8 @@ uint _libsafe_raVariableP(void *addr) {
 	unw_word_t sp;
 
 	/*
-	* If _libsafe_die() has been called, then we don't need to do anymore
-	* libsafe checking.
+	* If _libDefender_die() has been called, then we don't need to do anymore
+	* libDefender checking.
 	*/
 	if (dying)
 		return 0;
@@ -396,7 +393,7 @@ void create_dump_stack_filename(char *filename, int size) {
 
     // strcpy(filename, LIBSAFE_DUMP_STACK_FILE);
     // NOTE:  We can't use strcpy or sprintf, since they will be intercepted by
-    // libsafe and thus cause infinite recursion.
+    // libDefender and thus cause infinite recursion.
     for (p=LIBSAFE_DUMP_STACK_FILE,p2=filename; *p && count<size-1; p++) {
 	*p2++ = *p;
 	count++;
@@ -404,7 +401,7 @@ void create_dump_stack_filename(char *filename, int size) {
 
     // strcat(filename, <getpid()>)
     // NOTE:  We can't use strcpy or sprintf, since they will be intercepted by
-    // libsafe and thus cause infinite recursion.
+    // libDefender and thus cause infinite recursion.
     pid = getpid();
     for (p=buf; pid>0; p++) {
 	*p = '0' + (pid % 10);
@@ -419,9 +416,9 @@ void create_dump_stack_filename(char *filename, int size) {
 }
 
 /* Print the stack contents to stderr.  Use the same approximations for sp (the
- * top of the stack) that _libsafe_stackVariableP() uses.
+ * top of the stack) that _libDefender_stackVariableP() uses.
  */
-void _libsafe_dump_stack(char *file, int linenum) {
+void _libDefender_dump_stack(char *file, int linenum) {
     char    *sp;
     FILE    *fp=NULL;
     void    *current_stack_start;
@@ -568,7 +565,7 @@ static int send_command(int s, int expected, char *format, ...) {
      */
     res = send(s, command, len, 0);
     if (res == -1) {
-	perror("libsafe:send_command:send()");
+	perror("libDefender:send_command:send()");
 	return -1;
     }
 
@@ -650,7 +647,7 @@ static void sendmail(char *recipient, char *message) {
     time(&t);
 
     if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-	perror("libsafe:sendmail:socket()");
+	perror("libDefender:sendmail:socket()");
 	return;
     }
 
@@ -665,7 +662,7 @@ static void sendmail(char *recipient, char *message) {
     addr.sin_port        = htons(MAIL_PORT);
     addr.sin_family      = AF_INET;
     if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-	perror("libsafe:sendmail:connect()");
+	perror("libDefender:sendmail:connect()");
 	return;
     }
 
@@ -681,11 +678,11 @@ static void sendmail(char *recipient, char *message) {
      * '\n' returned by ctime().
      */
     if (send_command(s, 2, "HELO %s\r\n", hostname)) return;
-    if (send_command(s, 2, "MAIL FROM:<libsafe@%s>\r\n", hostname)) return;
+    if (send_command(s, 2, "MAIL FROM:<libDefender@%s>\r\n", hostname)) return;
     if (send_command(s, 2, "RCPT TO:<%s>\r\n", recipient)) return;
     if (send_command(s, 3, "DATA\r\n")) return;
     if (send_command(s, -1,
-	"Subject: ***** libsafe violation detected *****\r\n"
+	"Subject: ***** libDefender violation detected *****\r\n"
 	"To: %s\r\n"
 	"Date: %s\r\n"
 	"\r\n"
@@ -830,7 +827,7 @@ static void fill_assessment(idmef_assessment_t *assessment)
                 assessment->impact->type = user;
         
         idmef_string_set_constant(&assessment->impact->description,
-		"Stack overflow attempt detected and avoided by libsafe");
+		"Stack overflow attempt detected and avoided by libDefender");
         idmef_assessment_confidence_new(assessment);
         assessment->confidence->rating = high;
 
@@ -864,7 +861,7 @@ static void prelude_alert(char *filename)
         idmef_classification_t *classification;        
         
         
-        ret = prelude_sensor_init("libsafe", NULL, 0, NULL);
+        ret = prelude_sensor_init("libDefender", NULL, 0, NULL);
         if ( ret < 0 ) {
                 fprintf(stderr, "couldn't initialize the Prelude library\n");
                 return;
@@ -1000,7 +997,7 @@ static int check_nextfp(caddr_t fp, caddr_t nextfp) {
 
     if (nextfp > stack_start) {
 	LOG(2, "fp > stack_start; bypass enabled\n");
-	_libsafe_exclude = 1;
+	_libDefender_exclude = 1;
 	return 1;
     }
 
@@ -1009,7 +1006,7 @@ static int check_nextfp(caddr_t fp, caddr_t nextfp) {
      */
     if ((uint)nextfp & 0x03) {
 	LOG(2, "fp not word aligned; bypass enabled\n");
-	_libsafe_exclude = 1;
+	_libDefender_exclude = 1;
 	return 1;
     }
 
@@ -1018,7 +1015,7 @@ static int check_nextfp(caddr_t fp, caddr_t nextfp) {
      */
     if (nextfp <= fp) {
 	LOG(2, "fp not monotonically increasing; bypass enabled\n");
-	_libsafe_exclude = 1;
+	_libDefender_exclude = 1;
 	return 1;
     }
 
@@ -1118,7 +1115,7 @@ static int find_caller_addr(struct maps_st *maps, int count, caddr_t
  * customized actions triggered by detection put them here.  (format,...) is
  * similar to printf() and passed to syslog().
  */
-void _libsafe_warn(char *format, ...)
+void _libDefender_warn(char *format, ...)
 {
     char    exename[MAXPATHLEN];
     va_list args;
@@ -1193,8 +1190,8 @@ void _libsafe_warn(char *format, ...)
 	{
 	    /*
 	     * Print out the call stack.  We can assume that the stack is a
-	     * normal stack, since _libsafe_stackVariableP(),
-	     * _libsafe_raVariableP(), or _libsafe_span_stack_frames() had to
+	     * normal stack, since _libDefender_stackVariableP(),
+	     * _libDefender_raVariableP(), or _libDefender_span_stack_frames() had to
 	     * be called first.
 	     */
 	    caddr_t	fp, ra, nextfp, caller_addr;
@@ -1254,7 +1251,7 @@ void _libsafe_warn(char *format, ...)
 	 * If the mail_list file exists, then send email to all the recipients
 	 * listed in that file.  Otherwise, send email to root@localhost.
 	 */
-	if ((fp = fopen("/etc/libsafe.notify", "r")) == NULL) {
+	if ((fp = fopen("/etc/libDefender.notify", "r")) == NULL) {
 	    sendmail("root@localhost", errmsg);
 	} else {
 	    while (fgets(recipient, sizeof(recipient), fp)) {
@@ -1282,7 +1279,7 @@ void _libsafe_warn(char *format, ...)
 
     /*
      * Since we are justing doing a warning, set dying=0 to indicate that we
-     * should resume libsafe checking now.
+     * should resume libDefender checking now.
      */
     dying = 0;
 }
@@ -1293,14 +1290,14 @@ void _libsafe_warn(char *format, ...)
  * 'name' is the name of this library, and (format,...) is similar to printf()
  * and passed to syslog().
  */
-void _libsafe_die(char *format, ...)
+void _libDefender_die(char *format, ...)
 {
     va_list args;
 
     dying = 1;
 
     va_start(args, format);
-    _libsafe_warn(format, args);
+    _libDefender_warn(format, args);
     va_end(args);
 
 #ifdef DUMP_CORE

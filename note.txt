@@ -1,0 +1,8 @@
+le funzioni unw_getcontext ed unw_init_local restituiscono 0 se tutto va bene ed un valore <0 se qualcosa va storto, ho quindi aggiunto un semplice check sul valore di ritorno.
+
+la unw_get_reg eseguita 2 volte di seguito prima e dopo la chiamata a funzione non funziona, e' necessario ri-eseguire almeno il ciclo a partire dalla init_local.
+Alternativa: salvare il valore originario del puntatore context risparmiando cosi' la chiamata ad unw_init_local ed eseguendo solo la unw_get_reg.
+Questa modalita' non funziona perche' nel secondo caso il puntatore al frame originario (che e' l'indirizzo nel frame corrente e' stato corrotto e quindi dereferenziarlo causa un crash).
+E' quindi necessario ciclare di nuovo perche' in questo caso sara' la unw_step a gestire l'unwinding lungo lo stack corrotto probabilmente fallendo e quindi causando l'invocazione della syscall con un indirizzo sicuramente diverso da quello salvato.
+
+e' da inserire la parola chiave __restrict?

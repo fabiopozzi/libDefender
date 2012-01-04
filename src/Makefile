@@ -6,8 +6,7 @@
 # Copyright (C) 1999 Bell Labs, Lucent Technologies.
 # Copyright (C) Arash Baratloo, Timothy Tsai, and Navjot Singh.
 # 
-# This file is part of the Libsafe library.
-# Libsafe version 2.x: protecting against stack smashing attacks.
+# This file is based on the Libsafe library, version 2.x.
 # 
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,10 +21,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# For more information, 
-# 
-#   visit http://www.research.avayalabs.com/project/libsafe/index.html
-#   or email libsafe@research.avayalabs.com
 
 
 MAJOR_VERSION	= 2
@@ -34,12 +29,12 @@ PATCHLEVEL	= 16
 
 VERSION		= $(MAJOR_VERSION).$(MINOR_VERSION).$(PATCHLEVEL)
 
-LIBNAME		= libsafe.so.$(VERSION)
-LIBLINK		= libsafe.so.$(MAJOR_VERSION)
+LIBNAME		= libDefender.so.$(VERSION)
+LIBLINK		= libDefender.so.$(MAJOR_VERSION)
 LIBDIR		= /lib
 PRELOAD		= /etc/ld.so.preload
 
-MANNAME		= ../doc/libsafe.8
+MANNAME		= ../doc/libDefender.8
 MANDIR		= /usr/man/man8
 
 CC		= gcc
@@ -47,9 +42,6 @@ CPP		= g++
 DEPEND		= gcc -M
 RANLIB		= ranlib
 INSTALL		= install
-
-LIBPRELUDE_LIBS = $(shell if (libprelude-config --libs >/dev/null 2>&1); then libprelude-config --libs; fi)
-LIBPRELUDE_CFLAGS = $(shell if (libprelude-config --cflags >/dev/null 2>&1); then libprelude-config --cflags && echo -DHAVE_LIBPRELUDE; fi)
 
 LDFLAGS		= -shared -Wl,-soname,${LIBLINK} -ldl $(LIBPRELUDE_LIBS) -lunwind
 SRCS		= util.c intercept.c
@@ -67,14 +59,11 @@ HEADERS		= log.h util.h
 #		is detected (dumps to LIBSAFE_DUMP_STACK_FILE or stderr if that
 #		file can't be created)
 #	-DDUMP_CORE to create a core dump when terminating the program.
-#	-DNOTIFY_WITH_EMAIL if you wish to be notified via email of security
-#		violations that are caught with libsafe.
 DEBUG_FLAGS	= -DDEBUG_TURN_OFF_SYSLOG \
 		  -DDUMP_STACK \
-		  -DLIBSAFE_DUMP_STACK_FILE=\"/tmp/libsafe_stack_dump\" \
+		  -DLIBDEFENDER_DUMP_STACK_FILE=\"/tmp/libdefender_stack_dump\" \
 		  -DDUMP_CORE \
-		  -DNOTIFY_WITH_EMAIL
-CCFLAGS		= -O2 -Wall -fPIC -DLIBSAFE_VERSION=\"$(VERSION)\" $(LIBPRELUDE_CFLAGS)
+CCFLAGS		= -O2 -Wall -fPIC -DLIBSAFE_VERSION=\"$(VERSION)\"
 # Uncomment the following line to enable all debugging options.  Better way is
 # to do "make debug".
 #CCFLAGS		= -O2 -Wall -fPIC $(DEBUG_FLAGS)
@@ -93,7 +82,7 @@ all	::	$(LIBNAME)
 
 ${LIBNAME}:	dep $(OBJECTS)
 		$(CC) -o ${LIBNAME} $(LDFLAGS) ${OBJECTS}
-		ln -sf $(LIBNAME) libsafe.so
+		ln -sf $(LIBNAME) libDefender.so
 
 debug	:	CCFLAGS += $(DEBUG_FLAGS)
 debug	:	all
@@ -103,7 +92,7 @@ dep	::	$(SRCS) $(HEADERS)
 
 clean	::
 		rm -f core *.bak *% *~ *.o a.out dep
-		rm -f libsafe.so*
+		rm -f libDefender.so*
 
 purge	::	clean
 		rm -f $(LIBNAME)
@@ -112,9 +101,9 @@ install	::	all
 
 
 		@if [ -f $(PRELOAD) ] ; then \
-		 echo "Removing libsafe from $(PRELOAD) (if exists)"; \
+		 echo "Removing libDefender from $(PRELOAD) (if exists)"; \
 		 cp -fp $(PRELOAD) $(PRELOAD).save ; \
-		 grep -v libsafe $(PRELOAD) > $(PRELOAD).tmp ; \
+		 grep -v libDefender $(PRELOAD) > $(PRELOAD).tmp ; \
 		 rm -f $(PRELOAD) ;\
 		fi; \
 
@@ -126,7 +115,7 @@ install	::	all
 		 fi ;\
 		 rm -f $(PRELOAD).tmp 
 
-		@echo -n "Type y for installing libsafe system wide?[default n] ";\
+		@echo -n "Type y for installing libDefender system wide?[default n] ";\
 		read reply; \
 		if [ "$$reply" = 'y' ] ; then \
 	         if [ -f $(LIBDIR)/$(LIBLINK) ] ; then \
