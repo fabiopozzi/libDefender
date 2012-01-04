@@ -1,0 +1,7 @@
+Download libunwind
+./configure
+make
+make install
+cd /usr/local/lib
+cp -d libwunwind* /lib
+./install.sh -i
